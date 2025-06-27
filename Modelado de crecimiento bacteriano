@@ -1,0 +1,59 @@
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+
+st.set_page_config(page_title="Modelado de crecimiento bacteriano", layout="centered")
+
+st.title("🧫 Modelado de crecimiento bacteriano")
+st.subheader("UC: Lenguaje en las aplicaciones de la matemática")
+st.markdown("""
+**Por Adilé Fiorelli, Adrián Leiva, Daniel Techeira y Victoria Pereira.**
+
+Este simulador compara la **solución analítica y numérica** del modelo logístico de crecimiento poblacional.  
+Ingresá los valores iniciales para observar la evolución de la población en el tiempo.
+""")
+
+# Entradas del usuario
+Po = st.number_input("🔹 Población inicial P₀ (en t = 0)", min_value=1, value=100)
+P1 = st.number_input("🔹 Población en t = 1", min_value=1, value=120)
+K = st.number_input("🔹 Capacidad de carga K", min_value=Po + 1, value=500)
+
+# Validación básica
+if Po >= K or P1 >= K:
+    st.error("⚠️ La población inicial y P(1) deben ser menores que la capacidad de carga K.")
+else:
+    # Cálculo de constantes
+    C = Po / (K - Po)
+    try:
+        r = np.log(P1 / (C * (K - P1)))
+    except:
+        st.error("❌ Error al calcular la tasa de crecimiento. Verificá los valores ingresados.")
+        st.stop()
+
+    # Definición del modelo logístico
+    def modelo_logistico(t, P):
+        return r * P * (1 - P / K)
+
+    # Solución numérica
+    t_span = (0, 10)
+    t_eval = np.linspace(*t_span, 200)
+    sol_num = solve_ivp(modelo_logistico, t_span, [Po], t_eval=t_eval)
+
+    # Solución analítica
+    sol_analitica = (K * C * np.exp(r * t_eval)) / (1 + C * np.exp(r * t_eval))
+
+    # Mostrar tasa de crecimiento
+    st.markdown(f"✅ **Tasa de crecimiento estimada (r):** `{r:.4f}`")
+
+    # Gráfico
+    fig, ax = plt.subplots()
+    ax.plot(t_eval, sol_analitica, 'r-', label='Solución analítica')
+    ax.plot(sol_num.t, sol_num.y[0], 'k.', label='Solución numérica')
+    ax.set_xlabel("Tiempo")
+    ax.set_ylabel("Población")
+    ax.set_title("Crecimiento poblacional logístico")
+    ax.grid(True)
+    ax.legend()
+
+    st.pyplot(fig)
